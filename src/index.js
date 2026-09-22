@@ -54,18 +54,22 @@ export default {
       );
     }
 
-    // 3. 可选的安全访问密钥校验 (若设置了 SECRET_KEY 环境变量)
-    if (env && env.SECRET_KEY) {
-      const clientSecret = request.headers.get("X-Proxy-Secret");
-      if (clientSecret !== env.SECRET_KEY) {
-        return new Response(
-          JSON.stringify({ error: "Unauthorized: Invalid X-Proxy-Secret" }),
-          { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders() } }
-        );
-      }
+    // 3. 强制安全访问密钥校验 (防止作为公开代理被滥用)
+    if (!env || !env.SECRET_KEY) {
+      return new Response(
+        JSON.stringify({ error: "Server Configuration Error: SECRET_KEY not configured on Worker" }),
+        { status: 500, headers: { "Content-Type": "application/json", ...corsHeaders() } }
+      );
+    }
+    const clientSecret = request.headers.get("X-Proxy-Secret");
+    if (clientSecret !== env.SECRET_KEY) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized: Invalid or missing X-Proxy-Secret" }),
+        { status: 401, headers: { "Content-Type": "application/json", ...corsHeaders() } }
+      );
     }
 
-    // 4. 校验目标 URL 合法性
+    // 4. 校验目标 URL 合法性与白名单
     let targetUrl;
     try {
       targetUrl = new URL(targetUrlStr);
@@ -73,6 +77,40 @@ export default {
       return new Response(
         JSON.stringify({ error: `Invalid Target URL: ${targetUrlStr}` }),
         { status: 400, headers: { "Content-Type": "application/json", ...corsHeaders() } }
+      );
+    }
+
+    // 协议限制：仅允许 http 与 https，严禁 file:// 等内网协议
+    if (!["http:", "https:"].includes(targetUrl.protocol)) {
+      return new Response(
+        JSON.stringify({ error: `Forbidden protocol: ${targetUrl.protocol}` }),
+        { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders() } }
+      );
+    }
+
+    // 目标域名白名单校验：仅允许官方财经数据源，杜绝开放代理与 SSRF 滥用
+    const ALLOWED_DOMAINS = [
+      "eastmoney.com",
+      "sina.com.cn",
+      "sinajs.cn",
+      "tencent.com",
+      "gtimg.cn",
+      "163.com",
+      "cninfo.com.cn",
+      "sse.com.cn",
+      "szse.cn",
+      "cls.cn",
+      "akshare.xyz"
+    ];
+    const hostname = targetUrl.hostname.toLowerCase();
+    const isDomainAllowed = ALLOWED_DOMAINS.some(
+      domain => hostname === domain || hostname.endsWith("." + domain)
+    );
+
+    if (!isDomainAllowed) {
+      return new Response(
+        JSON.stringify({ error: `Forbidden target domain: ${hostname}. Only approved financial data sources are permitted.` }),
+        { status: 403, headers: { "Content-Type": "application/json", ...corsHeaders() } }
       );
     }
 
