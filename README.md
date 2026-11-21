@@ -11,6 +11,7 @@
 - 🌐 **全量 CORS 支持**：自动处理浏览器 `OPTIONS` 跨域预检，前端可直接无缝调用。
 - ⚡ **请求头清洗与防盗链伪造**：自动过滤代理内部 Header，补全 `User-Agent` 与 `Referer`。
 - 📦 **开箱即用**：适配 Cloudflare Workers GitHub 自动联部署与 Wrangler CLI。
+- 💡 **协同项目**：作为 [X-Data](https://github.com/xerafun/x-data)（全球宏观周期与金融数据看板）的官方边缘中继加速组件协同运行。
 
 ---
 
