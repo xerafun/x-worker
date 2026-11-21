@@ -100,7 +100,11 @@ export default {
       "sse.com.cn",
       "szse.cn",
       "cls.cn",
-      "akshare.xyz"
+      "akshare.xyz",
+      "chinabond.com.cn",
+      "chinamoney.com.cn",
+      "csindex.com.cn",
+      "xueqiu.com"
     ];
     const hostname = targetUrl.hostname.toLowerCase();
     const isDomainAllowed = ALLOWED_DOMAINS.some(
